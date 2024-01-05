@@ -77,7 +77,8 @@ If ( $PythonVersion -ne "" )
 {
 	$PythonVersion = "-py${PythonVersion}"
 }
-$Arguments = "--hidden-import artifacts --onedir tools\image_export.py"
+
+$Arguments = "--onedir tools\image_export.py" + ('future','psutil','pycreg','redis','zmq' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -97,7 +98,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--hidden-import artifacts --hidden-import future --hidden-import pysigscan --hidden-import requests --hidden-import yara --onedir tools\log2timeline.py"
+$Arguments = "--onedir tools\log2timeline.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -117,7 +118,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--hidden-import artifacts --onedir tools\pinfo.py"
+$Arguments = "--onedir tools\pinfo.py" + ('bencode','defusedxml','future','lz4','pefile','psutil','zmq' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -137,7 +138,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--hidden-import artifacts --hidden-import requests --onedir tools\psort.py"
+$Arguments = "--onedir tools\psort.py" + ('bencode','defusedxml','future','lz4','pefile' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -157,7 +158,8 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--hidden-import artifacts --hidden-import future --hidden-import pysigscan --hidden-import requests --hidden-import yara --onedir tools\psteal.py"
+$Arguments = "--onedir tools\psteal.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
+
 
 If ( $Python -ne "" )
 {
@@ -185,7 +187,6 @@ If (Test-Path "${DistPath}")
     Remove-Item -Force -Recurse "${DistPath}"
 }
 New-Item -ItemType "directory" -Path "${DistPath}"
-New-Item -ItemType "directory" -Path "${DistPath}\data"
 New-Item -ItemType "directory" -Path "${DistPath}\licenses"
 
 Copy-Item -Force ACKNOWLEDGEMENTS "${DistPath}"
@@ -199,8 +200,6 @@ Copy-Item -Force -Recurse "dist\pinfo\*" "${DistPath}"
 Copy-Item -Force -Recurse "dist\psort\*" "${DistPath}"
 Copy-Item -Force -Recurse "dist\psteal\*" "${DistPath}"
 
-Copy-Item -Force "data\*" "${DistPath}\data"
-
 # Copy the license files of the dependencies
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/log2timeline/l2tdevtools dist\l2tdevtools 2>&1"
 
@@ -209,11 +208,9 @@ Foreach ($d in $dep.context.DisplayPostContext.split(': ')[2].split(',')) {
     Copy-Item -Force "dist\l2tdevtools\data\licenses\LICENSE.$($d)" ${DistPath}\licenses
 }
 
-# Remove debug, test and yet unused dependencies.
-Remove-Item -Force ${DistPath}\licenses\LICENSE.libexe
-Remove-Item -Force ${DistPath}\licenses\LICENSE.libwrc
-Remove-Item -Force ${DistPath}\licenses\LICENSE.mock
-Remove-Item -Force ${DistPath}\licenses\LICENSE.pbr
+$DistPath = "${DistPath}\_internal"
+New-Item -ItemType "directory" -Path "${DistPath}\data"
+Copy-Item -Force -Recurse "data\*" "${DistPath}\data"
 
 # Copy the artifacts yaml files
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/ForensicArtifacts/artifacts.git dist\artifacts 2>&1"
@@ -223,7 +220,6 @@ Push-Location "dist\artifacts"
 Try
 {
 	$LatestTag = Invoke-Expression -Command "git.exe describe --tags $(git.exe rev-list --tags --max-count=1) 2>&1"
-
 	$Output = Invoke-Expression -Command "git.exe checkout ${LatestTag} 2>&1"
 }
 Finally
@@ -232,7 +228,7 @@ Finally
 }
 New-Item -ItemType "directory" -Path "${DistPath}\artifacts"
 
-Copy-Item -Force "dist\artifacts\data\*.yaml" "${DistPath}\artifacts"
+Copy-Item -Force "dist\artifacts\artifacts\data\*.yaml" "${DistPath}\artifacts"
 
 # Copy the dfVFS yaml (dtFabric definition) files
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/log2timeline/dfvfs.git dist\dfvfs 2>&1"
@@ -242,7 +238,6 @@ Push-Location "dist\dfvfs"
 Try
 {
 	$LatestTag = Invoke-Expression -Command "git.exe describe --tags $(git.exe rev-list --tags --max-count=1) 2>&1"
-
 	$Output = Invoke-Expression -Command "git.exe checkout ${LatestTag} 2>&1"
 }
 Finally
@@ -261,7 +256,6 @@ Push-Location "dist\dfwinreg"
 Try
 {
 	$LatestTag = Invoke-Expression -Command "git.exe describe --tags $(git.exe rev-list --tags --max-count=1) 2>&1"
-
 	$Output = Invoke-Expression -Command "git.exe checkout ${LatestTag} 2>&1"
 }
 Finally
@@ -273,19 +267,17 @@ New-Item -ItemType "directory" -Path "${DistPath}\dfwinreg"
 Copy-Item -Force "dist\dfwinreg\dfwinreg\*.yaml" "${DistPath}\dfwinreg"
 
 # Copy the plaso yaml (dtFabric definition) files
-New-Item -ItemType "directory" -Path "${DistPath}\plaso\parsers"
-New-Item -ItemType "directory" -Path "${DistPath}\plaso\parsers\esedb_plugins"
-New-Item -ItemType "directory" -Path "${DistPath}\plaso\parsers\olecf_plugins"
-New-Item -ItemType "directory" -Path "${DistPath}\plaso\parsers\plist_plugins"
-New-Item -ItemType "directory" -Path "${DistPath}\plaso\parsers\winreg_plugins"
+Get-ChildItem -Path "plaso\" -Recurse -Include "*.yaml" | Foreach-Object {
+	$source = ($_ | Resolve-Path -Relative ) -replace "^\.\\",""
+	$destination = "${DistPath}\$(Split-Path -Path $source)"
+	if(!(Test-Path $destination)) { $null = New-Item -ItemType "directory" -Path "$destination" }
+	Copy-Item $source -Destination "${DistPath}\$source" -Force
+}
 
-Copy-Item -Force "plaso\parsers\*.yaml" "${DistPath}\plaso\parsers"
-Copy-Item -Force "plaso\parsers\esedb_plugins\*.yaml" "${DistPath}\plaso\parsers\esedb_plugins"
-Copy-Item -Force "plaso\parsers\olecf_plugins\*.yaml" "${DistPath}\plaso\parsers\olecf_plugins"
-Copy-Item -Force "plaso\parsers\plist_plugins\*.yaml" "${DistPath}\plaso\parsers\plist_plugins"
-Copy-Item -Force "plaso\parsers\winreg_plugins\*.yaml" "${DistPath}\plaso\parsers\winreg_plugins"
 
 # Makes plaso-<version><python_version>-<architecture>.zip
 Add-Type -assembly "system.io.compression.filesystem"
 $PlasoPath = $(pwd | % Path)
+$ArchivePath = "${PlasoPath}\plaso-${Version}${PythonVersion}-${Architecture}.zip"
+if(Test-Path $ArchivePath) { Remove-Item $ArchivePath }
 [io.compression.zipfile]::CreateFromDirectory("${PlasoPath}\dist\plaso", "${PlasoPath}\plaso-${Version}${PythonVersion}-${Architecture}.zip")
