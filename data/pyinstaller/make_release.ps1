@@ -78,7 +78,7 @@ If ( $PythonVersion -ne "" )
 	$PythonVersion = "-py${PythonVersion}"
 }
 
-$Arguments = "--onedir tools\image_export.py" + ('future','psutil','pycreg','redis','zmq' | ForEach-Object { " --hidden-import " + $_ })
+$Arguments = "--onedir plaso\scripts\image_export.py" + ('future','psutil','pycreg','redis','zmq' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -89,7 +89,7 @@ Else
 	$Output = Invoke-Expression -Command "${PyInstaller} ${Arguments} 2>&1"
 }
 If ( $LastExitCode -ne 0 ) {
-    Write-Host "Error running PyInstaller for tools\image_export.py." -foreground Red
+    Write-Host "Error running PyInstaller for plaso\scripts\image_export.py." -foreground Red
     Write-Host ${Output} -foreground Red
     Exit 1
 }
@@ -98,7 +98,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--onedir tools\log2timeline.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
+$Arguments = "--onedir plaso\scripts\log2timeline.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -109,7 +109,7 @@ Else
 	$Output = Invoke-Expression -Command "${PyInstaller} ${Arguments} 2>&1"
 }
 If ( $LastExitCode -ne 0 ) {
-    Write-Host "Error running PyInstaller for tools\log2timeline.py." -foreground Red
+    Write-Host "Error running PyInstaller for plaso\scripts\log2timeline.py." -foreground Red
     Write-Host ${Output} -foreground Red
     Exit 1
 }
@@ -118,7 +118,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--onedir tools\pinfo.py" + ('bencode','defusedxml','future','lz4','pefile','psutil','zmq' | ForEach-Object { " --hidden-import " + $_ })
+$Arguments = "--onedir plaso\scripts\pinfo.py" + ('bencode','defusedxml','future','lz4','pefile','psutil','zmq' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -129,7 +129,7 @@ Else
 	$Output = Invoke-Expression -Command "${PyInstaller} ${Arguments} 2>&1"
 }
 If ( $LastExitCode -ne 0 ) {
-    Write-Host "Error running PyInstaller for tools\pinfo.py." -foreground Red
+    Write-Host "Error running PyInstaller for plaso\scripts\pinfo.py." -foreground Red
     Write-Host ${Output} -foreground Red
     Exit 1
 }
@@ -138,7 +138,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--onedir tools\psort.py" + ('bencode','defusedxml','future','lz4','pefile' | ForEach-Object { " --hidden-import " + $_ })
+$Arguments = "--onedir plaso\scripts\psort.py" + ('bencode','defusedxml','future','lz4','pefile' | ForEach-Object { " --hidden-import " + $_ })
 
 If ( $Python -ne "" )
 {
@@ -149,7 +149,7 @@ Else
 	$Output = Invoke-Expression -Command "${PyInstaller} ${Arguments} 2>&1"
 }
 If ( $LastExitCode -ne 0 ) {
-    Write-Host "Error running PyInstaller for tools\psort.py." -foreground Red
+    Write-Host "Error running PyInstaller for plaso\scripts\psort.py." -foreground Red
     Write-Host ${Output} -foreground Red
     Exit 1
 }
@@ -158,7 +158,7 @@ Else
 	Write-Host ${Output}
 }
 
-$Arguments = "--onedir tools\psteal.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
+$Arguments = "--onedir plaso\scripts\psteal.py" + ('future' | ForEach-Object { " --hidden-import " + $_ })
 
 
 If ( $Python -ne "" )
@@ -170,7 +170,7 @@ Else
 	$Output = Invoke-Expression -Command "${PyInstaller} ${Arguments} 2>&1"
 }
 If ( $LastExitCode -ne 0 ) {
-    Write-Host "Error running PyInstaller for tools\psteal.py." -foreground Red
+    Write-Host "Error running PyInstaller for plaso\scripts\psteal.py." -foreground Red
     Write-Host ${Output} -foreground Red
     Exit 1
 }
@@ -204,13 +204,13 @@ Copy-Item -Force -Recurse "dist\psteal\*" "${DistPath}"
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/log2timeline/l2tdevtools dist\l2tdevtools 2>&1"
 
 $dep = Get-Content dist\l2tdevtools\data\presets.ini | Select-String -pattern '\[plaso\]' -context 0,1
-Foreach ($d in $dep.context.DisplayPostContext.split(': ')[2].split(',')) {
+Foreach ($d in $dep.context.DisplayPostContext.split(': ')[1].split(',')) {
     Copy-Item -Force "dist\l2tdevtools\data\licenses\LICENSE.$($d)" ${DistPath}\licenses
 }
 
 $DistPath = "${DistPath}\_internal"
-New-Item -ItemType "directory" -Path "${DistPath}\data"
-Copy-Item -Force -Recurse "data\*" "${DistPath}\data"
+New-Item -ItemType "directory" -Path "${DistPath}\plaso\data"
+Copy-Item -Force -Recurse "plaso\data\*" "${DistPath}\plaso\data"
 
 # Copy the artifacts yaml files
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/ForensicArtifacts/artifacts.git dist\artifacts 2>&1"
@@ -226,9 +226,9 @@ Finally
 {
 	Pop-Location
 }
-New-Item -ItemType "directory" -Path "${DistPath}\artifacts"
+New-Item -ItemType "directory" -Path "${DistPath}\plaso\artifacts"
 
-Copy-Item -Force "dist\artifacts\artifacts\data\*.yaml" "${DistPath}\artifacts"
+Copy-Item -Force "dist\artifacts\artifacts\data\*.yaml" "${DistPath}\plaso\artifacts"
 
 # Copy the dfVFS yaml (dtFabric definition) files
 $Output = Invoke-Expression -Command "git.exe clone https://github.com/log2timeline/dfvfs.git dist\dfvfs 2>&1"
